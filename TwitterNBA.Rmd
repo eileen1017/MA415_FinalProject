@@ -1,0 +1,427 @@
+---
+title: "MA415_FinalProject"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(wordcloud)
+library(SnowballC)
+library(tm)
+options(warn = -1)
+library(twitteR)
+library(tidyverse)
+library(ggplot2)
+library(tidytext)
+library(stringr)
+library(reshape2)
+library(scales)
+library(janeaustenr)
+library(htmlwidgets)
+data(stop_words)
+
+#Add stop words to filter out
+stop_words <- add_row(stop_words, word = "t.co", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "https", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "http", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "rt", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "RT", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "an", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "a", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "the", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "game", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "and", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "android", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "embiid", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "retweet", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "each", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "false", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "tonight", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "had", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "nofollow", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "is", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "nba", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "client", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "to", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "this", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "followers", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "was", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "true", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "web", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "download", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "iphone", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "2018", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "href", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "rel", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "twitter", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "twittercom", lexicon = "SMART")
+stop_words <- add_row(stop_words, word = "tweetdeck", lexicon = "SMART")
+
+
+
+
+```
+
+#Description:
+
+Now is the season for NBA. Living in Boston, I want to see how Boston Celtics plays in this season. Recently, they have games with Philadelphia 76ers. Let's see how they are doing so far. 
+
+#Data used:
+
+I developed my own twitter Api and get the tweets and write in files such as celticsbefore.csv, celticsafter.csv, ssixersbefore.csv and ssixersafter.csv. Moreover, I created my own data such as TeamCeltics.csv and TeamSsixers.csv and data can be founded in nba.com.
+
+```{r}
+# define twitter developer api and get oauth
+consumer_key <- "8sRv9pBcuCLdvRilxd4On1wux"
+consumer_secret <- "ozhPjsZjmQdIWlGl6F4dOIIr89cVuTSiEk0qtuLw52lozBhPGc"
+access_token <- "244116769-t6j4kPgThVDU75q38wmviZiAOTBbQFR4WOy6Io7r"
+access_secret <- "sTG19v95hUmT9Y9gpZhuOvALe7JewjLqKLNbD7sVbPpjl"
+setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+
+# Get tweets about Boston Celtics Before May 5th Game
+tw = twitteR::searchTwitter('celtics -filter:retweets', n = 5000, since = '2018-5-04', retryOnRateLimit = 4)
+celticsbefore = twitteR::twListToDF(tw)
+clean_celticsbefore <- as_tibble(celticsbefore)
+write.csv(clean_celticsbefore, file = "celticsbefore.csv")
+
+# Get tweets about Philadelphia 76ers Before May 5th Game
+tw = twitteR::searchTwitter('sixers -filter:retweets', n = 5000, since = '2018-5-04', retryOnRateLimit = 4)
+ssixersbefore = twitteR::twListToDF(tw)
+clean_ssixersbefore <- as_tibble(ssixersbefore)
+write.csv(clean_ssixersbefore, file = "ssixersbefore.csv")
+
+# Get tweets about Boston Celtics After May 5th Game
+tw = twitteR::searchTwitter('celtics -filter:retweets', n = 5000, since = '2018-5-05', retryOnRateLimit = 4)
+celticsafter = twitteR::twListToDF(tw)
+clean_celticsafter <- as_tibble(celticsafter)
+write.csv(clean_celticsafter, file = "celticsafter.csv")
+
+# Get tweets about Philadelphia 76ers After May 5th Game
+tw = twitteR::searchTwitter('sixers -filter:retweets', n = 5000, since = '2018-5-05', retryOnRateLimit = 4)
+ssixersafter = twitteR::twListToDF(tw)
+clean_ssixersafter <- as_tibble(ssixersafter)
+write.csv(clean_ssixersafter, file = "ssixersafter.csv")
+
+
+```
+
+# Convert csv to txt
+```{r}
+celticsbefore = readLines("celticsbefore.csv")
+write.table(celticsbefore,"celticsbefore.txt",sep="\t",row.names=FALSE)
+
+ssixersbefore = readLines("ssixersbefore.csv")
+write.table(ssixersbefore,"ssixersbefore.txt",sep="\t",row.names=FALSE)
+
+celticsafter = readLines("celticsafter.csv")
+write.table(celticsafter,"celticsafter.txt",sep="\t",row.names=FALSE)
+
+ssixersafter = readLines("ssixersafter.csv")
+write.table(ssixersafter,"ssixersafter.txt",sep="\t",row.names=FALSE)
+
+```
+
+# Celtics Players Info 2018
+<span style="color:blue">Blue point: May 5th Game</span>
+<span style="color:red">Red point: May 3rd Game</span>
+<span style="color:green">Green point: April 30th Game</span>
+
+As we can see, Jayson Tatum, Al Horford and Terry Rozier are the major scorers in Celtics Team.
+
+```{r}
+# read file TeamCeltics.csv
+data_total <- read.csv("TeamCeltics.csv")
+
+# plot major players' scores in recent 3 games with 76ers
+ggplot(data = data_total, aes(x = Player)) + 
+  geom_point(aes(y = Fifth_PTS), colour="blue", size = 2) + 
+  geom_point(aes(y = Third_PTS), colour="red", size = 2) +
+  geom_point(aes(y = April_PTS), colour="green", size = 2) +
+  labs(subtitle="Celtics Vs 76ers 2018", 
+       y="Points Scored", 
+       x="Major Player Name", 
+       title="Team Celtics Major Player Scores",
+       caption = "Source: NBA Stats")
+
+```
+
+
+# 76ers Players Info 2018
+<span style="color:blue">Blue point: May 5th Game</span>
+<span style="color:red">Red point: May 3rd Game</span>
+<span style="color:green">Green point: April 30th Game</span>
+
+As we can see, Joel Embiid, JJ Redick and Ben Simmons are the major scorers in 76ers Team.
+
+```{r}
+# read file TeamSsixers.csv
+data_total <- read.csv("TeamSsixers.csv")
+
+# plot major players' scores in recent 3 games with Celtics
+ggplot(data = data_total, aes(x = Player)) + 
+  geom_point(aes(y = Fifth_PTS), colour="blue", size = 2) + 
+  geom_point(aes(y = Third_PTS), colour="red", size = 2) +
+  geom_point(aes(y = April_PTS), colour="green", size = 2) +
+  labs(subtitle="Celtics Vs 76ers 2018", 
+       y="Points Scored", 
+       x="Major Player Name", 
+       title="Team 76ers Major Player Scores",
+       caption = "Source: NBA Stats")
+
+```
+
+
+```{r}
+
+#helper functions
+getalltext <- function(file) {
+  file_text <- readLines(file)
+  file_text <- data_frame(line = 1:length(file_text), text = file_text)
+  file_text <- file_text %>% unnest_tokens(word, text) %>%  anti_join(stop_words, by = "word")
+  # Create a corpus from the collection of text files.
+  file_text_corpus <- Corpus(VectorSource(file_text))
+  # Remove punctuation
+  file_text_corpus <- tm_map(file_text_corpus, removePunctuation)
+  # Transform text to lower case
+  file_text_corpus <- tm_map(file_text_corpus, content_transformer(tolower))
+  # To remove some stopwords
+  file_text_corpus <- tm_map(file_text_corpus, removeWords,c("twittercom","false")) 
+  file_text_corpus
+
+}
+
+getMostFreq <- function(x){
+  # Build a term-document matrix
+  file_2 <- TermDocumentMatrix(x)
+  file_2 <- as.matrix(file_2)
+  file_2 <- sort(rowSums(file_2),decreasing=TRUE)
+  # Converting words to dataframe
+  file_2 <- data.frame(word = names(file_2),freq=file_2)
+  file_2
+}
+```
+# Get the most Frequent words Before and After May 5th Game
+
+```{r}
+
+# Celtics WordCloud Before Game
+celticsbefore_text <- getalltext("celticsbefore.txt")
+celticsbeforewords <- getMostFreq(celticsbefore_text)
+# Get table of most frequent words with frequency 
+head(celticsbeforewords, 15)
+# Draw bar plot of most frequent words with frequency 
+barplot(celticsbeforewords[1:15,]$freq, las = 2, names.arg = celticsbeforewords[1:15,]$word, col ="yellow", main ="Most frequent words",ylab = "Word frequencies")
+set.seed(1234)
+# Draw wordcloud for celtics before game
+wordcloud(celticsbefore_text,min.freq=100,max.words=500,scale=c(2.2,1), colors=brewer.pal(8, "Dark2"),random.color=T, random.order=F)
+
+# 76ers WordCloud Before Game
+ssixersbefore_text <- getalltext("ssixersbefore.txt")
+ssixersbeforewords <- getMostFreq(ssixersbefore_text)
+# Get table of most frequent words with frequency 
+head(ssixersbeforewords,15)
+# Draw bar plot of most frequent words with frequency 
+barplot(ssixersbeforewords[1:15,]$freq, las = 2, names.arg = ssixersbeforewords[1:15,]$word, col ="yellow", main ="Most frequent words",ylab = "Word frequencies")
+set.seed(1234)
+# Draw wordcloud for 76ers before game
+wordcloud(ssixersbefore_text,min.freq=100,max.words=500,scale=c(2.2,1), colors=brewer.pal(8, "Dark2"),random.color=T, random.order=F)
+
+# Celtics WordClound After Game
+celticsafter_text <- getalltext("celticsafter.txt")
+celticsafterwords <- getMostFreq(celticsafter_text)
+# Get table of most frequent words with frequency 
+head(celticsafterwords, 15)
+# Draw bar plot of most frequent words with frequency 
+barplot(celticsafterwords[1:15,]$freq, las = 2, names.arg = celticsafterwords[1:15,]$word, col ="yellow", main ="Most frequent words",ylab = "Word frequencies")
+set.seed(1234)
+# Draw wordcloud for Celtics after game
+wordcloud(celticsafter_text,min.freq=100,max.words=500,scale=c(2.2,1), colors=brewer.pal(8, "Dark2"),random.color=T, random.order=F)
+
+# 76ers WordCloud After Game
+ssixersafter_text <- getalltext("ssixersafter.txt")
+ssixersafterwords <- getMostFreq(ssixersafter_text)
+# Get table of most frequent words with frequency 
+head(ssixersafterwords,15)
+# Draw bar plot of most frequent words with frequency 
+barplot(ssixersafterwords[1:15,]$freq, las = 2, names.arg = ssixersafterwords[1:15,]$word, col ="yellow", main ="Most frequent words",ylab = "Word frequencies")
+set.seed(1234)
+# Draw wordcloud for 76ers after game
+wordcloud(ssixersafter_text,min.freq=100,max.words=500,scale=c(2.2,1), colors=brewer.pal(8, "Dark2"),random.color=T, random.order=F)
+
+
+```
+
+
+
+# Sentiment Analysis 
+
+```{r}
+# Read txt files
+celticsbefore <- read.delim("celticsbefore.txt", header=FALSE)
+ssixersbefore <- read.delim("ssixersbefore.txt", header = FALSE)
+celticsafter <- read.delim("celticsafter.txt", header=FALSE)
+ssixersafter <- read.delim("ssixersafter.txt", header = FALSE)
+
+# Converting text to dataframe
+tidy_celticsbefore<- data_frame(paragraph = 149, text = as.character(celticsbefore$V1)) %>% 
+  unnest_tokens(word, text) %>%  anti_join(stop_words, by = "word")
+tidy_ssixersbefore <- data_frame(paragraph = 112, text= as.character(ssixersbefore$V1)) %>% 
+  unnest_tokens(word, text) %>%  anti_join(stop_words, by = "word")
+tidy_celticsafter<- data_frame(paragraph = 149, text = as.character(celticsafter$V1)) %>% 
+  unnest_tokens(word, text) %>%  anti_join(stop_words, by = "word")
+tidy_ssixersafter <- data_frame(paragraph = 112, text= as.character(ssixersafter$V1)) %>% 
+  unnest_tokens(word, text) %>%  anti_join(stop_words, by = "word")
+
+# bing type of celtics tweets before game
+celticsbefore_sentiment <- tidy_celticsbefore %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word, sentiment, index = paragraph %/% 2) %>% 
+  spread(sentiment, n, fill = 0) %>% 
+  mutate(sentiment = positive-negative)
+
+# bing type of celtics tweets after game
+celticsafter_sentiment <- tidy_celticsafter %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word, sentiment, index = paragraph %/% 2) %>% 
+  spread(sentiment, n, fill = 0) %>% 
+  mutate(sentiment = positive-negative)
+
+# bing type of 76ers tweets before game
+ssixersbefore_sentiment <- tidy_ssixersbefore %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word, sentiment, index = paragraph %/% 3) %>% 
+  spread(sentiment, n, fill = 0) %>% 
+  mutate(sentiment = positive-negative)
+
+# bing type of 76ers tweets after game
+ssixersafter_sentiment <- tidy_ssixersafter %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word, sentiment, index = paragraph %/% 3) %>% 
+  spread(sentiment, n, fill = 0) %>% 
+  mutate(sentiment = positive-negative)
+
+
+
+```
+
+## Positive/negative words for Celtics tweets before May 5th game
+```{r message=FALSE}
+celticsbefore_word_counts <- tidy_celticsbefore %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word, sentiment, sort = TRUE)
+
+# Plot of Positive/Negative Tweets 
+celticsbefore_word_counts %>% 
+  group_by(sentiment) %>% 
+  top_n(10) %>% 
+  ungroup() %>% 
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Sentiments",
+       x = NULL) +
+  ggtitle("Tweets about Celtics before May 5th game") +
+  coord_flip()
+
+# WordCloud of Positive/Negative Tweets 
+tidy_celticsbefore %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray80", "gray20"),
+                   max.words = 100)
+
+```
+
+## Positive/negative words for Celtics tweets After May 5th game
+```{r message=FALSE}
+celticsafter_word_counts <- tidy_celticsafter %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word, sentiment, sort = TRUE)
+
+# Plot of Positive/Negative Tweets 
+celticsafter_word_counts %>% 
+  group_by(sentiment) %>% 
+  top_n(10) %>% 
+  ungroup() %>% 
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Sentiments",
+       x = NULL) +
+  ggtitle("Tweets about Celtics after May 5th game") +
+  coord_flip()
+
+# WordCloud of Positive/Negative Tweets 
+tidy_celticsafter %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray80", "gray20"),
+                   max.words = 100)
+
+```
+
+## Positive/negative words for 76ers tweets before May 5th game
+```{r message=FALSE}
+ssixersbefore_word_counts <- tidy_ssixersbefore %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word, sentiment, sort = TRUE)
+
+# Plot of Positive/Negative Tweets 
+ssixersbefore_word_counts %>% 
+  group_by(sentiment) %>% 
+  top_n(10) %>% 
+  ungroup() %>% 
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Sentiments",
+       x = NULL) +
+  ggtitle("Tweets about 76ers before May 5th game") +
+  coord_flip()
+
+# WordCloud of Positive/Negative Tweets 
+tidy_ssixersbefore %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray80", "gray20"),
+                   max.words = 100)
+
+```
+
+
+
+## Positive/negative words for 76ers tweets after May 5th game
+```{r message=FALSE}
+ssixersafter_word_counts <- tidy_ssixersafter %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word, sentiment, sort = TRUE)
+
+# Plot of Positive/Negative Tweets 
+ssixersafter_word_counts %>% 
+  group_by(sentiment) %>% 
+  top_n(10) %>% 
+  ungroup() %>% 
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Sentiments",
+       x = NULL) +
+  ggtitle("Tweets about 76ers After May 5th game") +
+  coord_flip()
+
+# WordCloud of Positive/Negative Tweets 
+tidy_ssixersafter %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray80", "gray20"),
+                   max.words = 100)
+
+```
+

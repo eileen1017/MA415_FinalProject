@@ -1,0 +1,12 @@
+name: TwitterNBA
+title: TwitterNBA
+username:
+account: eileenli
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 339069
+bundleId: 1361525
+url: https://eileenli.shinyapps.io/TwitterNBA/
+when: 1525748289.30788
+asMultiple: FALSE
+asStatic: FALSE
